@@ -1,20 +1,29 @@
-import { Refine } from "@refinedev/core";
+import { Authenticated, Refine } from "@refinedev/core";
 import {
   ThemedLayoutV2,
   ErrorComponent,
   RefineThemes,
   useNotificationProvider,
+  AuthPage,
 } from "@refinedev/antd";
 import routerBindings, {
+  CatchAllNavigate,
   NavigateToResource,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router-v6";
-import dataProvider from "@refinedev/simple-rest";
+import dataProvider, { axiosInstance } from "@refinedev/simple-rest";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
-import { AntdInferencer } from "@refinedev/inferencer/antd";
 
 import { ConfigProvider } from "antd";
 import "@refinedev/antd/dist/reset.css";
+
+import { BlogPostList } from "./pages/blog-posts/list";
+import { BlogPostEdit } from "./pages/blog-posts/edit";
+import { BlogPostShow } from "./pages/blog-posts/show";
+import { BlogPostCreate } from "./pages/blog-posts/create";
+
+import authProvider from "./authProvider";
+import test from "node:test";
 
 const App: React.FC = () => {
   return (
@@ -22,6 +31,7 @@ const App: React.FC = () => {
       <ConfigProvider theme={RefineThemes.Blue}>
         <Refine
           routerProvider={routerBindings}
+          authProvider={authProvider}
           dataProvider={dataProvider("https://api.fake-rest.refine.dev")}
           notificationProvider={useNotificationProvider}
           resources={[
@@ -31,6 +41,9 @@ const App: React.FC = () => {
               show: "/blog-posts/show/:id",
               create: "/blog-posts/create",
               edit: "/blog-posts/edit/:id",
+              meta: {
+                canDelete: true,
+              },
             },
           ]}
           options={{
@@ -41,9 +54,14 @@ const App: React.FC = () => {
           <Routes>
             <Route
               element={
-                <ThemedLayoutV2>
-                  <Outlet />
-                </ThemedLayoutV2>
+                <Authenticated
+                  key=""
+                  fallback={<CatchAllNavigate to="/login" />}
+                >
+                  <ThemedLayoutV2>
+                    <Outlet />
+                  </ThemedLayoutV2>
+                </Authenticated>
               }
             >
               <Route
@@ -51,11 +69,39 @@ const App: React.FC = () => {
                 element={<NavigateToResource resource="blog_posts" />}
               />
               <Route path="blog-posts">
-                <Route index element={<AntdInferencer />} />
-                <Route path="show/:id" element={<AntdInferencer />} />
-                <Route path="edit/:id" element={<AntdInferencer />} />
-                <Route path="create" element={<AntdInferencer />} />
+                <Route index element={<BlogPostList />} />
+                <Route path="show/:id" element={<BlogPostShow />} />
+                <Route path="edit/:id" element={<BlogPostEdit />} />
+                <Route path="create" element={<BlogPostCreate />} />
               </Route>
+            </Route>
+            <Route
+              element={
+                <Authenticated key="" fallback={<Outlet />}>
+                  <NavigateToResource />
+                </Authenticated>
+              }
+            >
+              <Route path="/login" element={<AuthPage type="login" />} />
+              <Route path="/register" element={<AuthPage type="register" />} />
+              <Route
+                path="/forgot-password"
+                element={<AuthPage type="forgotPassword" />}
+              />
+              <Route
+                path="/update-password"
+                element={<AuthPage type="updatePassword" />}
+              />
+            </Route>
+            <Route
+              element={
+                <Authenticated key="" fallback={<Outlet />}>
+                  <ThemedLayoutV2>
+                    <Outlet />
+                  </ThemedLayoutV2>
+                </Authenticated>
+              }
+            >
               <Route path="*" element={<ErrorComponent />} />
             </Route>
           </Routes>
